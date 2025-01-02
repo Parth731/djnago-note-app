@@ -1,54 +1,52 @@
-
 @Library('shared') _
 pipeline {
     agent { label 'vinod' }
-    
+
     stages {
-        //shared library
-        stage('Hello') {
+        stage('Cleanup') {
             steps {
                 script {
-                    hello()
-                    sh 'docker system prune -a -f --volumes'
-                    sh 'docker-compose down'
+                    echo "Cleaning up unused Docker resources"
+                    sh 'docker-compose down || true'  // Take down existing containers (ignore errors if none exist)
+                    sh 'docker system prune -a -f --volumes'  // Cleanup all unused resources
                 }
             }
         }
-        stage('code') {
+        stage('Clone Code') {
             steps {
-                echo 'this is cloning the code'
-                git url: 'https://github.com/Parth731/djnago-note-app.git', branch: 'parth-dev'
-                echo 'code is clone successfully'
+                script {
+                    echo "Cloning the code repository"
+                    git url: 'https://github.com/Parth731/djnago-note-app.git', branch: 'parth-dev'
+                    echo "Code cloned successfully"
+                }
             }
         }
         stage('Build') {
             steps {
-                echo 'This is building the code'
-                sh 'whoami'
-                sh 'docker build -t notes-app:latest .'
-
+                script {
+                    echo "Building the Docker image"
+                    sh 'docker build --no-cache -t parth731/notes-app:latest .'
+                }
             }
         }
-        stage('Test') {
+        stage('Push to Docker Hub') {
             steps {
-                echo 'This is testing the code'
-            }
-        }
-        stage('push to docker hub') {
-            steps {
-                echo 'this is pushing the code to docker hub'
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh 'docker login -u $USERNAME -p $PASSWORD'
-                    sh 'docker tag notes-app:latest $USERNAME/notes-app:latest'
-                    sh 'docker push $USERNAME/notes-app:latest'
+                script {
+                    echo "Pushing the image to Docker Hub"
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh 'docker login -u $USERNAME -p $PASSWORD'
+                        sh 'docker push parth731/notes-app:latest'
+                    }
                 }
             }
         }
         stage('Deploy') {
             steps {
-                echo 'This is deploy the code'
-                // sh 'docker run -d -p 8000:8000 note-app:latest'
-                sh 'docker-compose up -d'
+                script {
+                    echo "Deploying the application using Docker Compose"
+                    sh 'docker-compose pull'  // Ensure the latest image is pulled
+                    sh 'docker-compose up -d --force-recreate'  // Force recreate containers to avoid stale configs
+                }
             }
         }
     }
