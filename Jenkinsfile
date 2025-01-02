@@ -1,28 +1,55 @@
+
+@Library('shared') _
 pipeline {
-    agent any
-    stages{
-        stage("Clone Code"){
-            steps{
-                git url: "https://github.com/LondheShubham153/django-notes-app.git", branch: "main"
-            }
-        }
-        stage("Build and Test"){
-            steps{
-                sh "docker build . -t note-app-test-new"
-            }
-        }
-        stage("Push to Docker Hub"){
-            steps{
-                withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
-                sh "docker tag note-app-test-new ${env.dockerHubUser}/note-app-test-new:latest"
-                sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                sh "docker push ${env.dockerHubUser}/note-app-test-new:latest"
+    agent { label 'vinod' }
+    
+    stages {
+        //shared library
+        stage('Hello') {
+            steps {
+                script {
+                    hello()
+                    sh 'docker volume prune -f'
+                    sh 'docker container prune -f'
+                    sh 'docker image prune -f'
                 }
             }
         }
-        stage("Deploy"){
-            steps{
-                sh "docker-compose down && docker-compose up -d"
+        stage('code') {
+            steps {
+                echo 'this is cloning the code'
+                git url: 'https://github.com/Parth731/djnago-note-app.git', branch: 'parth-dev'
+                echo 'code is clone successfully'
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'This is building the code'
+                sh 'whoami'
+                sh 'docker build -t notes-app:latest .'
+
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'This is testing the code'
+            }
+        }
+        stage('push to docker hub') {
+            steps {
+                echo 'this is pushing the code to docker hub'
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh 'docker login -u $USERNAME -p $PASSWORD'
+                    sh 'docker tag notes-app:latest $USERNAME/notes-app:latest'
+                    sh 'docker push $USERNAME/notes-app:latest'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'This is deploy the code'
+                // sh 'docker run -d -p 8000:8000 note-app:latest'
+                sh 'docker-compose up -d'
             }
         }
     }
