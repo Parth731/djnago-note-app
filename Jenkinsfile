@@ -9,9 +9,8 @@ pipeline {
             steps {
                 script {
                     hello()
-                    sh 'docker volume prune -f'
-                    sh 'docker container prune -f'
-                    sh 'docker image prune -f'
+                    sh 'docker system prune -a -f --volumes'
+                    sh 'docker-compose down'
                 }
             }
         }
