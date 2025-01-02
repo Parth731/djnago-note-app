@@ -44,8 +44,9 @@ pipeline {
             steps {
                 script {
                     echo "Deploying the application using Docker Compose"
-                    sh 'docker-compose pull'  // Ensure the latest image is pulled
-                    sh 'docker-compose up -d --force-recreate'  // Force recreate containers to avoid stale configs
+                    // sh 'docker-compose pull'  // Ensure the latest image is pulled
+                    // sh 'docker-compose up -d --force-recreate'  // Force recreate containers to avoid stale configs
+                    sh 'docker-compose down && docker-compose up -d'
                 }
             }
         }
